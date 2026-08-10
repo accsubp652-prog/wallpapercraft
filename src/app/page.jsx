@@ -1,16 +1,14 @@
 import { prisma } from '@/lib/prisma';
 import WallpaperGrid from '@/components/WallpaperGrid';
+import Navbar from '@/components/Navbar'; // Asegúrate de importar tu Navbar si lo tienes en componentes
 
-// Desactiva el almacenamiento en caché estático para refrescar los datos en tiempo real
 export const revalidate = 0;
 
 export default async function HomePage({ searchParams }) {
-  // Capturar posibles filtros desde la URL (por ejemplo: /?category=anime&search=4k)
   const params = await searchParams;
   const selectedCategory = params?.category;
   const searchQuery = params?.search;
 
-  // Construir la condición de búsqueda para Prisma
   const whereClause = {};
 
   if (selectedCategory) {
@@ -26,11 +24,10 @@ export default async function HomePage({ searchParams }) {
     ];
   }
 
-  // Consulta directa a la base de datos de PostgreSQL en Railway
   const wallpapers = await prisma.wallpaper.findMany({
     where: whereClause,
     orderBy: {
-      createdAt: 'desc', // Muestra los fondos más recientes primero
+      createdAt: 'desc',
     },
     include: {
       category: true,
@@ -44,7 +41,6 @@ export default async function HomePage({ searchParams }) {
     },
   });
 
-  // Convertir los campos Decimal/Date a tipos serializables para los componentes de React
   const formattedWallpapers = wallpapers.map((wallpaper) => ({
     ...wallpaper,
     price: Number(wallpaper.price),
@@ -53,9 +49,12 @@ export default async function HomePage({ searchParams }) {
 
   return (
     <main className="min-h-screen bg-neutral-950 text-white pb-16">
+      {/* Contenedor principal de la interfaz */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        <header className="mb-8">
-          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+        
+        {/* Encabezado y título */}
+        <header className="mb-8 border-b border-neutral-800 pb-6">
+          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-white">
             Explora Fondos de Pantalla
           </h1>
           <p className="mt-2 text-sm text-neutral-400">
@@ -63,7 +62,7 @@ export default async function HomePage({ searchParams }) {
           </p>
         </header>
 
-        {/* Grilla de fondos que recibe los datos reales de PostgreSQL */}
+        {/* Grilla de contenidos */}
         {formattedWallpapers.length > 0 ? (
           <WallpaperGrid wallpapers={formattedWallpapers} />
         ) : (

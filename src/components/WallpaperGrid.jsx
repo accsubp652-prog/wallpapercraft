@@ -1,52 +1,63 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { Download, Sparkles } from 'lucide-react';
 
-export default function WallpaperGrid({ wallpapers, onSelect }) {
+export default function WallpaperGrid({ wallpapers = [] }) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {wallpapers.map((wallpaper, index) => (
-        <motion.div
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-5">
+      {wallpapers.map((wallpaper) => (
+        <div
           key={wallpaper.id}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: index * 0.05 }}
-          onClick={() => onSelect(wallpaper)}
-          className="group relative h-72 rounded-2xl overflow-hidden bg-slate-800 border border-slate-800/80 cursor-pointer shadow-lg hover:shadow-indigo-500/10 transition-all duration-300"
+          className="group relative bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden hover:border-neutral-700 hover:shadow-xl hover:shadow-black/60 transition-all duration-300 flex flex-col"
         >
-          {/* Imagen de fondo */}
-          <img
-            src={wallpaper.thumbnail}
-            alt={wallpaper.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            loading="lazy"
-          />
+          {/* Contenedor de la Imagen */}
+          <div className="relative aspect-[9/16] w-full bg-neutral-950 overflow-hidden">
+            <img
+              src={wallpaper.imageUrl}
+              alt={wallpaper.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
 
-          {/* Sombra suave / Gradiente */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
-
-          {/* Badges superiores (Exclusive / Resolution) */}
-          <div className="absolute top-3 left-3 right-3 flex justify-between items-center z-10">
-            <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider bg-slate-900/80 backdrop-blur-md text-slate-300 rounded-md border border-slate-700/50">
-              {wallpaper.resolution}
-            </span>
+            {/* Insignia Exclusivo / Premium */}
             {wallpaper.isExclusive && (
-              <span className="px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 rounded-md shadow-md">
-                PRO
-              </span>
+              <div className="absolute top-2.5 left-2.5 bg-amber-500/90 text-black font-semibold text-[10px] px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-md">
+                <Sparkles size={10} />
+                Exclusivo
+              </div>
             )}
+
+            {/* Resolución */}
+            <div className="absolute top-2.5 right-2.5 bg-black/60 text-neutral-300 font-medium text-[10px] px-2 py-0.5 rounded-md backdrop-blur-md border border-white/10">
+              {wallpaper.resolution}
+            </div>
           </div>
 
-          {/* Información inferior */}
-          <div className="absolute bottom-3 left-3 right-3 z-10">
-            <h3 className="text-sm font-bold text-white truncate drop-shadow-sm">
-              {wallpaper.title}
-            </h3>
-            <p className="text-xs text-slate-400 truncate">
-              {wallpaper.author}
-            </p>
+          {/* Información del Wallpaper */}
+          <div className="p-3 flex flex-col justify-between flex-grow bg-neutral-900">
+            <div>
+              <h3 className="font-semibold text-white truncate text-sm mb-0.5">
+                {wallpaper.title}
+              </h3>
+              
+              <p className="text-[11px] text-neutral-400 truncate mb-2">
+                Por: <span className="text-neutral-300">{wallpaper.author?.name || 'Creador Admin'}</span>
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-neutral-800 text-[11px] text-neutral-400">
+              <span className="truncate">{wallpaper.category?.name || 'Sin categoría'}</span>
+              <a
+                href={wallpaper.imageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg transition-colors flex items-center justify-center shrink-0"
+                title="Descargar"
+              >
+                <Download size={13} />
+              </a>
+            </div>
           </div>
-        </motion.div>
+        </div>
       ))}
     </div>
   );
