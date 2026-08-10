@@ -17,6 +17,8 @@ model User {
   wallpapers   Wallpaper[]
   favorites    Favorite[]
   transactions Transaction[]
+
+  @@map("users")
 }
 
 model Category {
@@ -24,6 +26,8 @@ model Category {
   name       String      @unique
   slug       String      @unique
   wallpapers Wallpaper[]
+
+  @@map("categories")
 }
 
 model Wallpaper {
@@ -44,6 +48,8 @@ model Wallpaper {
   createdAt      DateTime      @default(now())
   favorites      Favorite[]
   transactions   Transaction[]
+
+  @@map("wallpapers")
 }
 
 model Favorite {
@@ -54,6 +60,7 @@ model Favorite {
   wallpaper   Wallpaper @relation(fields: [wallpaperId], references: [id], onDelete: Cascade)
 
   @@id([userId, wallpaperId])
+  @@map("favorites")
 }
 
 model Transaction {
@@ -66,4 +73,6 @@ model Transaction {
   createdAt   DateTime   @default(now())
   user        User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
   wallpaper   Wallpaper? @relation(fields: [wallpaperId], references: [id], onDelete: SetNull)
+
+  @@map("transactions")
 }
