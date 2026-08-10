@@ -1,0 +1,69 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String        @id @default(uuid()) @db.Uuid
+  email        String        @unique
+  name         String?
+  avatarUrl    String?
+  isPremium    Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  wallpapers   Wallpaper[]
+  favorites    Favorite[]
+  transactions Transaction[]
+}
+
+model Category {
+  id         Int         @id @default(autoincrement())
+  name       String      @unique
+  slug       String      @unique
+  wallpapers Wallpaper[]
+}
+
+model Wallpaper {
+  id             String        @id @default(uuid()) @db.Uuid
+  title          String
+  description    String?
+  imageUrl       String
+  thumbnailUrl   String
+  authorId       String        @db.Uuid
+  author         User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  categoryId     Int?
+  category       Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  isExclusive    Boolean       @default(false)
+  isAnimated     Boolean       @default(false)
+  price          Decimal       @default(0.00) @db.Decimal(5, 2)
+  resolution     String        @default("4K")
+  downloadsCount Int           @default(0)
+  createdAt      DateTime      @default(now())
+  favorites      Favorite[]
+  transactions   Transaction[]
+}
+
+model Favorite {
+  userId      String    @db.Uuid
+  wallpaperId String    @db.Uuid
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallpaper   Wallpaper @relation(fields: [wallpaperId], references: [id], onDelete: Cascade)
+
+  @@id([userId, wallpaperId])
+}
+
+model Transaction {
+  id          String     @id @default(uuid()) @db.Uuid
+  userId      String?    @db.Uuid
+  wallpaperId String?    @db.Uuid
+  amount      Decimal    @db.Decimal(6, 2)
+  type        String     // 'subscription', 'pack_purchase', 'tip'
+  status      String     @default("completed")
+  createdAt   DateTime   @default(now())
+  user        User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  wallpaper   Wallpaper? @relation(fields: [wallpaperId], references: [id], onDelete: SetNull)
+}

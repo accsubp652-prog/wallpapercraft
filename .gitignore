@@ -1,0 +1,15 @@
+# Depósitos de dependencias y compilación
+node_modules/
+.next/
+out/
+build/
+
+# Archivos de variables de entorno (NUNCA SUBIR)
+.env
+.env.local
+.env.development.local
+.env.production.local
+
+# Archivos del sistema
+.DS_Store
+*.pem
