@@ -6,6 +6,7 @@ export async function POST(req) {
     const contentType = req.headers.get('content-type') || '';
     let title, description, imageUrl, categorySlug, resolution, isExclusive, price, authorId;
 
+    // 1. Extraer los datos según si vienen en FormData (archivos) o JSON (URLs externas)
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
       title = formData.get('title');
@@ -16,8 +17,7 @@ export async function POST(req) {
       price = formData.get('price');
       authorId = formData.get('authorId');
       
-      // Nota: Si usas almacenamiento de archivos local o S3, procesa el archivo aquí.
-      // Por simplicidad en este ejemplo se asigna la referencia de imagen ingresada.
+      // NOTA: Si usas almacenamiento de imágenes (Cloudinary, AWS S3, etc.), la URL vendría del servicio subido.
       imageUrl = formData.get('imageUrl') || '/placeholder-wallpaper.jpg';
     } else {
       const body = await req.json();
@@ -31,37 +31,37 @@ export async function POST(req) {
       authorId = body.authorId;
     }
 
-    // 1. Validar que exista el id del autor en la petición
+    // 2. Validar que exista un ID de usuario/autor en la petición
     if (!authorId) {
       return NextResponse.json(
-        { error: 'Inicia sesión para poder publicar fondos de pantalla.' },
+        { error: 'Debes iniciar sesión para publicar un fondo de pantalla.' },
         { status: 401 }
       );
     }
 
-    // 2. Buscar al usuario en PostgreSQL mediante Prisma
+    // 3. Buscar el usuario en la base de datos PostgreSQL mediante Prisma
     const user = await prisma.user.findUnique({
       where: { id: authorId },
     });
 
     if (!user) {
       return NextResponse.json(
-        { error: 'El usuario no está registrado en la base de datos.' },
+        { error: 'El usuario no existe o no se encuentra registrado en la base de datos.' },
         { status: 404 }
       );
     }
 
-    // 3. RESTRICCIÓN DE PLAN: Bloquear subida a cuentas en Plan Gratuito
+    // 4. RESTRICCIÓN DE PLAN: Verificar si la cuenta NO es Premium
     if (!user.isPremium) {
       return NextResponse.json(
         { 
-          error: 'Tu cuenta pertenece al Plan Gratuito. La opción de publicar fondos está restringida a usuarios Premium.' 
+          error: 'Tu cuenta pertenece al Plan Gratuito. La opción de publicar fondos está reservada exclusivamente a usuarios Premium.' 
         },
         { status: 403 }
       );
     }
 
-    // 4. Buscar o vincular la categoría seleccionada
+    // 5. Vincular categoría opcional si se envió el slug
     let categoryRecord = null;
     if (categorySlug) {
       categoryRecord = await prisma.category.findUnique({
@@ -69,11 +69,11 @@ export async function POST(req) {
       });
     }
 
-    // 5. Crear el registro en la base de datos de Railway
+    // 6. Guardar el nuevo fondo de pantalla en PostgreSQL (Railway)
     const newWallpaper = await prisma.wallpaper.create({
       data: {
-        title: title || 'Fondo sin título',
-        description: description || '',
+        title: title ? title.trim() : 'Fondo sin título',
+        description: description ? description.trim() : '',
         imageUrl,
         thumbnailUrl: imageUrl,
         resolution: resolution || '4K',
@@ -94,7 +94,7 @@ export async function POST(req) {
   } catch (error) {
     console.error('Error en la API de subida de imágenes:', error);
     return NextResponse.json(
-      { error: 'Error interno al intentar guardar la imagen en PostgreSQL.' },
+      { error: 'Ocurrió un error interno al intentar procesar la imagen en el servidor.' },
       { status: 500 }
     );
   }
