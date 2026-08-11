@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Upload, Link as LinkIcon, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { X, Upload, Link as LinkIcon, Loader2 } from 'lucide-react';
 
-export default function UploadModal({ isOpen, onClose }) {
+export default function UploadModal({ isOpen, onClose, user }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('file'); // 'file' o 'url'
   const [loading, setLoading] = useState(false);
@@ -44,6 +44,7 @@ export default function UploadModal({ isOpen, onClose }) {
         formData.append('resolution', resolution);
         formData.append('isExclusive', isExclusive);
         formData.append('price', price);
+        formData.append('authorId', user?.id || '');
         formData.append('file', file);
 
         response = await fetch('/api/wallpapers/upload', {
@@ -70,6 +71,7 @@ export default function UploadModal({ isOpen, onClose }) {
             resolution,
             isExclusive,
             price,
+            authorId: user?.id || '',
           }),
         });
       }
@@ -80,13 +82,13 @@ export default function UploadModal({ isOpen, onClose }) {
         throw new Error(data.error || 'Error al subir el fondo de pantalla.');
       }
 
-      // Limpiar formulario
+      // Limpiar campos del formulario
       setTitle('');
       setDescription('');
       setImageUrl('');
       setFile(null);
       
-      // Cerrar modal y refrescar la vista en tiempo real
+      // Cerrar modal y refrescar la página
       onClose();
       router.refresh();
     } catch (err) {
@@ -98,10 +100,10 @@ export default function UploadModal({ isOpen, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
       <div className="relative w-full max-w-lg bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl p-6 text-white overflow-hidden">
         
-        {/* Header */}
+        {/* Encabezado */}
         <div className="flex justify-between items-center pb-4 border-b border-neutral-800">
           <h2 className="text-xl font-bold">Subir Fondo de Pantalla</h2>
           <button
@@ -112,7 +114,7 @@ export default function UploadModal({ isOpen, onClose }) {
           </button>
         </div>
 
-        {/* Pestanas de Seleccion */}
+        {/* Pestañas de Selección */}
         <div className="flex gap-2 my-4 p-1 bg-neutral-950 rounded-lg border border-neutral-800">
           <button
             type="button"
@@ -140,6 +142,7 @@ export default function UploadModal({ isOpen, onClose }) {
           </button>
         </div>
 
+        {/* Mensaje de Error */}
         {errorMsg && (
           <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
             {errorMsg}

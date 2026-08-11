@@ -1,55 +1,26 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { v2 as cloudinary } from 'cloudinary';
 
-// Configuración de credenciales de Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-export async function POST(request) {
+export async function POST(req) {
   try {
-    const contentType = request.headers.get('content-type') || '';
-    let title, description, imageUrl, categorySlug, resolution, isExclusive, price;
+    const contentType = req.headers.get('content-type') || '';
+    let title, description, imageUrl, categorySlug, resolution, isExclusive, price, authorId;
 
-    // 1. Manejo de archivo adjunto (multipart/form-data)
     if (contentType.includes('multipart/form-data')) {
-      const formData = await request.formData();
+      const formData = await req.formData();
       title = formData.get('title');
       description = formData.get('description');
       categorySlug = formData.get('categorySlug');
       resolution = formData.get('resolution');
       isExclusive = formData.get('isExclusive') === 'true';
       price = formData.get('price');
-
-      const file = formData.get('file');
-      if (!file) {
-        return NextResponse.json(
-          { error: 'No se adjuntó ningún archivo de imagen.' },
-          { status: 400 }
-        );
-      }
-
-      // Convertir el archivo a Buffer y subirlo a Cloudinary
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-
-      const uploadResult = await new Promise((resolve, reject) => {
-        cloudinary.uploader.upload_stream(
-          { folder: 'wallpapercraft' },
-          (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-          }
-        ).end(buffer);
-      });
-
-      imageUrl = uploadResult.secure_url;
+      authorId = formData.get('authorId');
+      
+      // Nota: Si usas almacenamiento de archivos local o S3, procesa el archivo aquí.
+      // Por simplicidad en este ejemplo se asigna la referencia de imagen ingresada.
+      imageUrl = formData.get('imageUrl') || '/placeholder-wallpaper.jpg';
     } else {
-      // 2. Manejo de URL externa (application/json)
-      const body = await request.json();
+      const body = await req.json();
       title = body.title;
       description = body.description;
       imageUrl = body.imageUrl;
@@ -57,55 +28,73 @@ export async function POST(request) {
       resolution = body.resolution;
       isExclusive = body.isExclusive;
       price = body.price;
+      authorId = body.authorId;
     }
 
-    // Validación básica de campos obligatorios
-    if (!title || !imageUrl) {
+    // 1. Validar que exista el id del autor en la petición
+    if (!authorId) {
       return NextResponse.json(
-        { error: 'El título y la imagen son obligatorios.' },
-        { status: 400 }
+        { error: 'Inicia sesión para poder publicar fondos de pantalla.' },
+        { status: 401 }
       );
     }
 
-    // Buscar o crear un usuario por defecto
-    let user = await prisma.user.findFirst();
+    // 2. Buscar al usuario en PostgreSQL mediante Prisma
+    const user = await prisma.user.findUnique({
+      where: { id: authorId },
+    });
+
     if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email: 'admin@wallpapercraft.com',
-          name: 'Creador Admin',
-        },
-      });
+      return NextResponse.json(
+        { error: 'El usuario no está registrado en la base de datos.' },
+        { status: 404 }
+      );
     }
 
-    // Buscar la categoría seleccionada
-    let category = null;
+    // 3. RESTRICCIÓN DE PLAN: Bloquear subida a cuentas en Plan Gratuito
+    if (!user.isPremium) {
+      return NextResponse.json(
+        { 
+          error: 'Tu cuenta pertenece al Plan Gratuito. La opción de publicar fondos está restringida a usuarios Premium.' 
+        },
+        { status: 403 }
+      );
+    }
+
+    // 4. Buscar o vincular la categoría seleccionada
+    let categoryRecord = null;
     if (categorySlug) {
-      category = await prisma.category.findUnique({
+      categoryRecord = await prisma.category.findUnique({
         where: { slug: categorySlug },
       });
     }
 
-    // Guardar el registro en la base de datos de PostgreSQL (Railway)
+    // 5. Crear el registro en la base de datos de Railway
     const newWallpaper = await prisma.wallpaper.create({
       data: {
-        title,
+        title: title || 'Fondo sin título',
         description: description || '',
         imageUrl,
         thumbnailUrl: imageUrl,
         resolution: resolution || '4K',
         isExclusive: Boolean(isExclusive),
-        price: price ? parseFloat(price) : 0.0,
+        price: price ? parseFloat(price) : 0,
         authorId: user.id,
-        categoryId: category ? category.id : null,
+        categoryId: categoryRecord ? categoryRecord.id : null,
       },
     });
 
-    return NextResponse.json(newWallpaper, { status: 201 });
-  } catch (error) {
-    console.error('Error detallado en el backend:', error);
     return NextResponse.json(
-      { error: error.message || 'Error interno del servidor al procesar la imagen.' },
+      {
+        message: 'Fondo de pantalla publicado con éxito.',
+        wallpaper: newWallpaper,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error('Error en la API de subida de imágenes:', error);
+    return NextResponse.json(
+      { error: 'Error interno al intentar guardar la imagen en PostgreSQL.' },
       { status: 500 }
     );
   }

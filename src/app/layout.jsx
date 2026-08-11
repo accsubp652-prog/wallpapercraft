@@ -10,10 +10,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es">
       <body className="bg-neutral-950 text-white antialiased">
-        {/* Navbar global visible en todas las pantallas */}
         <Navbar />
-        
-        {/* Contenido de cada página */}
         {children}
       </body>
     </html>
