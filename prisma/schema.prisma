@@ -1,78 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 model User {
-  id           String        @id @default(uuid()) @db.Uuid
-  email        String        @unique
-  name         String?
-  avatarUrl    String?
-  isPremium    Boolean       @default(false)
-  createdAt    DateTime      @default(now())
-  wallpapers   Wallpaper[]
-  favorites    Favorite[]
-  transactions Transaction[]
+  id        String   @id @default(uuid())
+  name      String?
+  email     String   @unique
+  isPremium Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@map("users")
+  // Relación: Un usuario puede publicar varios fondos
+  wallpapers Wallpaper[]
+
+  @@map("User")
 }
 
 model Category {
-  id         Int         @id @default(autoincrement())
-  name       String      @unique
-  slug       String      @unique
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relación: Una categoría contiene varios fondos
   wallpapers Wallpaper[]
 
-  @@map("categories")
+  @@map("Category")
 }
 
 model Wallpaper {
-  id             String        @id @default(uuid()) @db.Uuid
-  title          String
-  description    String?
-  imageUrl       String
-  thumbnailUrl   String
-  authorId       String        @db.Uuid
-  author         User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  categoryId     Int?
-  category       Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  isExclusive    Boolean       @default(false)
-  isAnimated     Boolean       @default(false)
-  price          Decimal       @default(0.00) @db.Decimal(5, 2)
-  resolution     String        @default("4K")
-  downloadsCount Int           @default(0)
-  createdAt      DateTime      @default(now())
-  favorites      Favorite[]
-  transactions   Transaction[]
+  id           String   @id @default(uuid())
+  title        String
+  description  String?
+  imageUrl     String
+  thumbnailUrl String?
+  resolution   String   @default("4K")
+  isExclusive  Boolean  @default(false)
+  price        Float    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  @@map("wallpapers")
-}
+  // Relación con el usuario (Autor)
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
-model Favorite {
-  userId      String    @db.Uuid
-  wallpaperId String    @db.Uuid
-  createdAt   DateTime  @default(now())
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  wallpaper   Wallpaper @relation(fields: [wallpaperId], references: [id], onDelete: Cascade)
+  // Relación opcional con la Categoría
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
-  @@id([userId, wallpaperId])
-  @@map("favorites")
-}
-
-model Transaction {
-  id          String     @id @default(uuid()) @db.Uuid
-  userId      String?    @db.Uuid
-  wallpaperId String?    @db.Uuid
-  amount      Decimal    @db.Decimal(6, 2)
-  type        String     // 'subscription', 'pack_purchase', 'tip'
-  status      String     @default("completed")
-  createdAt   DateTime   @default(now())
-  user        User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
-  wallpaper   Wallpaper? @relation(fields: [wallpaperId], references: [id], onDelete: SetNull)
-
-  @@map("transactions")
+  @@map("Wallpaper")
 }
