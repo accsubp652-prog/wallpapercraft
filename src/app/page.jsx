@@ -1,19 +1,20 @@
 import { prisma } from '@/lib/prisma';
 import WallpaperGrid from '@/components/WallpaperGrid';
-import Navbar from '@/components/Navbar'; // Asegúrate de importar tu Navbar si lo tienes en componentes
 
+// Deshabilitar la caché estática para reflejar nuevos fondos de inmediato
 export const revalidate = 0;
 
 export default async function HomePage({ searchParams }) {
   const params = await searchParams;
-  const selectedCategory = params?.category;
-  const searchQuery = params?.search;
+  const categorySlug = params?.category;
+  const searchQuery = params?.q;
 
+  // Construir el filtro para la consulta de Prisma
   const whereClause = {};
 
-  if (selectedCategory) {
+  if (categorySlug) {
     whereClause.category = {
-      slug: selectedCategory,
+      slug: categorySlug,
     };
   }
 
@@ -24,6 +25,7 @@ export default async function HomePage({ searchParams }) {
     ];
   }
 
+  // Obtener los fondos de pantalla y sus relaciones desde PostgreSQL
   const wallpapers = await prisma.wallpaper.findMany({
     where: whereClause,
     orderBy: {
@@ -35,46 +37,35 @@ export default async function HomePage({ searchParams }) {
         select: {
           id: true,
           name: true,
-          avatarUrl: true,
+          email: true,
+          isPremium: true,
         },
       },
     },
   });
 
-  const formattedWallpapers = wallpapers.map((wallpaper) => ({
-    ...wallpaper,
-    price: Number(wallpaper.price),
-    createdAt: wallpaper.createdAt.toISOString(),
-  }));
+  // Obtener todas las categorías para la barra de filtros
+  const categories = await prisma.category.findMany({
+    orderBy: {
+      name: 'asc',
+    },
+  });
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-white pb-16">
-      {/* Contenedor principal de la interfaz */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        
-        {/* Encabezado y título */}
-        <header className="mb-8 border-b border-neutral-800 pb-6">
-          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-white">
-            Explora Fondos de Pantalla
-          </h1>
-          <p className="mt-2 text-sm text-neutral-400">
-            Descubre y descarga fondos de alta resolución subidos por la comunidad.
-          </p>
-        </header>
+    <main className="min-h-screen bg-neutral-950 text-white pb-20">
+      {/* Hero Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-8 text-center">
+        <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white mb-4">
+          Descubre los mejores <span className="bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">Wallpapers</span>
+        </h1>
+        <p className="text-neutral-400 max-w-2xl mx-auto text-sm sm:text-base">
+          Explora y descarga fondos de pantalla exclusivos en alta resolución creados por nuestra comunidad.
+        </p>
+      </section>
 
-        {/* Grilla de contenidos */}
-        {formattedWallpapers.length > 0 ? (
-          <WallpaperGrid wallpapers={formattedWallpapers} />
-        ) : (
-          <div className="text-center py-20 bg-neutral-900/50 rounded-2xl border border-neutral-800">
-            <p className="text-neutral-400 text-lg">
-              No se encontraron fondos de pantalla.
-            </p>
-            <p className="text-neutral-600 text-sm mt-1">
-              ¡Sé el primero en subir uno utilizando el botón de publicación!
-            </p>
-          </div>
-        )}
+      {/* Galería / Grid de Fondos */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+        <WallpaperGrid wallpapers={wallpapers} categories={categories} />
       </section>
     </main>
   );
